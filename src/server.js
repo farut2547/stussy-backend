@@ -20,11 +20,11 @@ mongoose.connect(process.env.MONGODB_URI, {
 // Static files ต้องอยู่ก่อน routes
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.use('/api/auth',     require('./src/routes/auth'));
-app.use('/api/products', require('./src/routes/products'));
-app.use('/api/orders',   require('./src/routes/orders'));
-app.use('/api/cart',     require('./src/routes/cart'));
-app.use('/api/receipts', require('./src/routes/receipts'));
+app.use('/api/auth',     require('./routes/auth'));
+app.use('/api/products', require('./routes/products'));
+app.use('/api/orders',   require('./routes/orders'));
+app.use('/api/cart',     require('./routes/cart'));
+app.use('/api/receipts', require('./routes/receipts'));
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
