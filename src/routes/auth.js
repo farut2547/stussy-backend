@@ -1,9 +1,8 @@
- 
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { protect } = require('../middleware/auth');
+const { protect, admin } = require('../middleware/auth');
 
 const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
 
@@ -30,6 +29,44 @@ router.get('/me', protect, (req, res) => res.json(req.user));
 router.put('/address', protect, async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(req.user._id, { address: req.body }, { new: true }).select('-password');
+    res.json(user);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.user._id, req.body, { new: true }).select('-password');
+    res.json(user);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.put('/change-password', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!(await user.matchPassword(req.body.oldPassword))) return res.status(400).json({ message: 'รหัสผ่านเดิมไม่ถูกต้อง' });
+    user.password = req.body.newPassword;
+    await user.save();
+    res.json({ message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.get('/users', protect, admin, async (req, res) => {
+  try {
+    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.delete('/users/:id', protect, admin, async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: 'User deleted' });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.put('/users/:id/role', protect, admin, async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, { role: req.body.role }, { new: true }).select('-password');
     res.json(user);
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
