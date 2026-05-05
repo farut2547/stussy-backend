@@ -32,6 +32,7 @@ app.use('/api/products', require('./routes/products'));
 app.use('/api/orders',   require('./routes/orders'));
 app.use('/api/cart',     require('./routes/cart'));
 app.use('/api/receipts', require('./routes/receipts'));
+app.use('/api/coupons', require('./routes/coupons'));
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
