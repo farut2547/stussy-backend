@@ -1,4 +1,12 @@
+const express = require('express');
+const router = express.Router();
+const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const User = require('../models/User');
+const { protect } = require('../middleware/auth');
+
+const signToken = (id) =>
+  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -8,13 +16,15 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// ─── POST /api/auth/register ───────────────────────────────────────────────
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    if (await User.findOne({ email })) return res.status(400).json({ message: 'Email already exists' });
+    if (await User.findOne({ email }))
+      return res.status(400).json({ message: 'Email already exists' });
+
     const user = await User.create({ name, email, password });
 
-    // ส่ง Email ยืนยัน
     try {
       await transporter.sendMail({
         from: `"Stussy Store" <${process.env.EMAIL_USER}>`,
@@ -38,6 +48,103 @@ router.post('/register', async (req, res) => {
       console.error('❌ Email error:', emailErr.message);
     }
 
-    res.status(201).json({ token: signToken(user._id), user: { id: user._id, name: user.name, email: user.email, role: user.role } });
-  } catch (err) { res.status(500).json({ message: err.message }); }
+    res.status(201).json({
+      token: signToken(user._id),
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
+
+// ─── POST /api/auth/login ──────────────────────────────────────────────────
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user || !(await user.matchPassword(password)))
+      return res.status(401).json({ message: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
+
+    res.json({
+      token: signToken(user._id),
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ─── GET /api/auth/me ──────────────────────────────────────────────────────
+router.get('/me', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ─── PUT /api/auth/profile ─────────────────────────────────────────────────
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || name.trim() === '')
+      return res.status(400).json({ message: 'กรุณากรอกชื่อ' });
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { name: name.trim() },
+      { new: true }
+    ).select('-password');
+
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ─── PUT /api/auth/change-password ────────────────────────────────────────
+router.put('/change-password', protect, async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword)
+      return res.status(400).json({ message: 'กรุณากรอกข้อมูลให้ครบ' });
+
+    if (newPassword.length < 6)
+      return res.status(400).json({ message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
+
+    const user = await User.findById(req.user._id);
+    const isMatch = await user.matchPassword(oldPassword);
+    if (!isMatch)
+      return res.status(400).json({ message: 'รหัสผ่านเดิมไม่ถูกต้อง' });
+
+    user.password = newPassword;
+    await user.save(); // pre('save') hook จะ hash ให้อัตโนมัติ
+
+    res.json({ message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ─── PUT /api/auth/address ─────────────────────────────────────────────────
+router.put('/address', protect, async (req, res) => {
+  try {
+    const { name, street, tambon, amphoe, province, postalCode, phone } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        address: { name, street, tambon, amphoe, province, postalCode, phone },
+      },
+      { new: true }
+    ).select('-password');
+
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+module.exports = router;
