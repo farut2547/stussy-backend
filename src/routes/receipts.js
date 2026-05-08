@@ -1,7 +1,7 @@
 const express  = require('express');
 const router   = express.Router();
 const { protect, admin } = require('../middleware/auth');
-const Receipt  = require('../models/receipt');
+const Receipt  = require('../models/Receipt');
 const Order    = require('../models/order');
 const User     = require('../models/user');
 const PDFDocument = require('pdfkit');

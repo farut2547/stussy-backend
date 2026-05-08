@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
-const User = require('../models/user');
+const User = require('../models/User');
 const { protect, admin } = require('../middleware/auth');
 
 const signToken = (id) =>
