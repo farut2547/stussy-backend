@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Order = require('../models/Order');
+const Order = require('../models/order');
 const { protect, admin } = require('../middleware/auth');
 
 // 1. สร้าง Order ใหม่

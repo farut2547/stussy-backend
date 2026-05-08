@@ -1,9 +1,9 @@
 const express  = require('express');
 const router   = express.Router();
 const { protect, admin } = require('../middleware/auth');
-const Receipt  = require('../models/Receipt');
-const Order    = require('../models/Order');
-const User     = require('../models/User');
+const Receipt  = require('../models/receipt');
+const Order    = require('../models/order');
+const User     = require('../models/user');
 const PDFDocument = require('pdfkit');
 const nodemailer  = require('nodemailer');
 const path     = require('path');
