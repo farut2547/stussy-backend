@@ -3,7 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const User = require('../models/User');
-const { protect } = require('../middleware/auth');
+const { protect, admin } = require('../middleware/auth');
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -120,7 +120,7 @@ router.put('/change-password', protect, async (req, res) => {
       return res.status(400).json({ message: 'รหัสผ่านเดิมไม่ถูกต้อง' });
 
     user.password = newPassword;
-    await user.save(); // pre('save') hook จะ hash ให้อัตโนมัติ
+    await user.save();
 
     res.json({ message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
   } catch (err) {
@@ -135,13 +135,47 @@ router.put('/address', protect, async (req, res) => {
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      {
-        address: { name, street, tambon, amphoe, province, postalCode, phone },
-      },
+      { address: { name, street, tambon, amphoe, province, postalCode, phone } },
       { new: true }
     ).select('-password');
 
     res.json({ user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ✅ ─── GET /api/auth/users (Admin — ดูสมาชิกทั้งหมด) ──────────────────────
+router.get('/users', protect, admin, async (req, res) => {
+  try {
+    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ✅ ─── PUT /api/auth/users/:id/role (Admin — เปลี่ยน role) ────────────────
+router.put('/users/:id/role', protect, admin, async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role: req.body.role },
+      { new: true }
+    ).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ✅ ─── DELETE /api/auth/users/:id (Admin — ลบสมาชิก) ─────────────────────
+router.delete('/users/:id', protect, admin, async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ message: 'ลบสมาชิกสำเร็จ' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
