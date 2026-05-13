@@ -127,18 +127,16 @@ router.post('/create', protect, async (req, res) => {
     if (order.user.toString() !== req.user.id)
       return res.status(403).json({ message: 'ไม่มีสิทธิ์' });
 
-    // ถ้ามีใบเสร็จอยู่แล้ว ส่งกลับเลย ไม่ต้องสร้างใหม่
     const existing = await Receipt.findOne({ order: orderId });
     if (existing) return res.status(200).json({ message: 'มีใบเสร็จแล้ว', receipt: existing });
 
     const user = await User.findById(req.user.id);
 
-    // ✅ แก้: ใช้ i.qty แทน i.quantity ให้ตรงกับ Order model
     const items = order.items.map(i => ({
       productName: i.product?.name || i.name || 'สินค้า',
-      quantity   : i.qty || 1,                                    // ✅ แก้จาก i.quantity → i.qty
+      quantity   : i.qty || 1,
       price      : i.product?.price || i.price || 0,
-      subtotal   : (i.qty || 1) * (i.product?.price || i.price || 0), // ✅ แก้
+      subtotal   : (i.qty || 1) * (i.product?.price || i.price || 0),
     }));
 
     const subtotal    = items.reduce((s, i) => s + i.subtotal, 0);
@@ -158,11 +156,9 @@ router.post('/create', protect, async (req, res) => {
 
     await receipt.save();
 
-    // ✅ แก้: เปลี่ยน awaiting_confirmation → awaiting_payment (ตรงกับ Order enum)
     order.status = paymentMethod === 'cod' ? 'confirmed' : 'awaiting_payment';
     await order.save();
 
-    // COD → ออกใบเสร็จ + ส่ง Email ทันที
     if (paymentMethod === 'cod') {
       try {
         const pdfPath     = await generateReceiptPDF(receipt, user);
@@ -172,7 +168,6 @@ router.post('/create', protect, async (req, res) => {
         await sendReceiptEmail(user, receipt, pdfPath);
       } catch (emailErr) {
         console.error('❌ Email/PDF error:', emailErr.message);
-        // ไม่ throw เพราะใบเสร็จสร้างสำเร็จแล้ว
       }
     }
 
@@ -215,7 +210,7 @@ router.patch('/:id/reject', protect, admin, async (req, res) => {
       { paymentStatus: 'rejected' },
       { new: true }
     );
-    await Order.findByIdAndUpdate(receipt.order, { status: 'cancelled' }); // ✅ ใช้ status ที่มีใน enum
+    await Order.findByIdAndUpdate(receipt.order, { status: 'cancelled' });
     res.json({ message: 'ปฏิเสธการชำระเงินแล้ว', receipt });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -234,7 +229,7 @@ router.get('/my', protect, async (req, res) => {
   }
 });
 
-// ─── GET /api/receipts/admin/all  (Admin) — ต้องอยู่เหนือ /:id ───────────────
+// ─── GET /api/receipts/admin/all  (Admin) ────────────────────────────────────
 router.get('/admin/all', protect, admin, async (req, res) => {
   try {
     const { status, method, page = 1, limit = 20 } = req.query;
@@ -253,6 +248,51 @@ router.get('/admin/all', protect, admin, async (req, res) => {
     res.json({ receipts, total, page: Number(page), totalPages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─── GET /api/receipts/:id/pdf ────────────────────────────────────────────────
+// ✅ เพิ่ม: ให้ Flutter ดาวน์โหลด/แชร์ PDF ได้
+// - ถ้ามี PDF อยู่แล้ว (pdfUrl) → ส่งไฟล์นั้นเลย
+// - ถ้ายังไม่มี → generate ใหม่แล้วส่ง (เฉพาะ confirmed)
+router.get('/:id/pdf', protect, async (req, res) => {
+  try {
+    const receipt = await Receipt.findById(req.params.id);
+    if (!receipt) return res.status(404).json({ message: 'ไม่พบใบเสร็จ' });
+
+    // เฉพาะเจ้าของหรือ admin เท่านั้น
+    if (receipt.user.toString() !== req.user.id && req.user.role !== 'admin')
+      return res.status(403).json({ message: 'ไม่มีสิทธิ์' });
+
+    // ยังไม่ confirmed → ยังออกใบเสร็จไม่ได้
+    if (receipt.paymentStatus !== 'confirmed')
+      return res.status(400).json({ message: 'ยังไม่ได้รับการยืนยัน' });
+
+    const dir      = path.join(__dirname, '../../uploads/receipts');
+    const filePath = path.join(dir, `${receipt.receiptNumber}.pdf`);
+
+    // ถ้า PDF มีอยู่แล้ว → ส่งตรง
+    if (fs.existsSync(filePath)) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${receipt.receiptNumber}.pdf"`);
+      return res.sendFile(filePath);
+    }
+
+    // ยังไม่มี PDF → generate แล้วส่ง
+    const user    = await User.findById(receipt.user);
+    const newPath = await generateReceiptPDF(receipt, user);
+
+    // บันทึก pdfUrl ถ้ายังไม่มี
+    if (!receipt.pdfUrl) {
+      receipt.pdfUrl = `/uploads/receipts/${receipt.receiptNumber}.pdf`;
+      await receipt.save();
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${receipt.receiptNumber}.pdf"`);
+    res.sendFile(newPath);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
