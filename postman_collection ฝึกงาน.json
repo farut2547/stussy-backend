@@ -1,0 +1,305 @@
+{
+  "info": {
+    "_postman_id": "stussy-store-api-v1",
+    "name": "Stussy Store API",
+    "description": "API Collection สำหรับแอป Stussy Store — Flutter + Node.js + MongoDB\n\n**วิธีใช้:**\n1. นำเข้าไฟล์นี้ใน Postman (Import → Upload Files)\n2. ตั้งค่า Environment: baseUrl = http://localhost:5000\n3. รัน Login ก่อน → Copy token → วางใน Authorization ของ Request อื่น",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "token", "value": "", "type": "string", "description": "JWT Token จาก Login/Register" }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "var json = pm.response.json();",
+                "if (json.token) { pm.collectionVariables.set('token', json.token); }"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"0812345678\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          },
+          "response": [{
+            "name": "Register Success",
+            "status": "Created",
+            "code": 201,
+            "body": "{\n  \"message\": \"Register successful\",\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"user\": {\n    \"_id\": \"64f1234567890abcdef12345\",\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\"\n  }\n}"
+          }]
+        },
+        {
+          "name": "Login",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "var json = pm.response.json();",
+                "if (json.token) {",
+                "  pm.collectionVariables.set('token', json.token);",
+                "  console.log('Token saved:', json.token);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          },
+          "response": [{
+            "name": "Login Success",
+            "status": "OK",
+            "code": 200,
+            "body": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY0ZjEyMzQ1...\",\n  \"user\": {\n    \"_id\": \"64f1234567890abcdef12345\",\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\"\n  }\n}"
+          }]
+        }
+      ]
+    },
+    {
+      "name": "🛍️ Products",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"],
+              "query": [
+                { "key": "category", "value": "tee", "disabled": true },
+                { "key": "search", "value": "world tour", "disabled": true },
+                { "key": "isActive", "value": "true", "disabled": true }
+              ]
+            }
+          },
+          "response": [{
+            "name": "Products List",
+            "status": "OK",
+            "code": 200,
+            "body": "[\n  {\n    \"_id\": \"69f16917d2ddca6eb3e023c4\",\n    \"name\": \"Stussy 8 Ball Tee\",\n    \"category\": \"tee\",\n    \"price\": 1390,\n    \"description\": \"เสื้อยืดลาย 8 Ball ไอคอนิค\",\n    \"imageUrl\": \"assets/images/stussy_3.jpg\",\n    \"sizes\": [\"S\", \"M\", \"L\", \"XL\"],\n    \"isActive\": true\n  },\n  {\n    \"_id\": \"69f168d7d2ddca6eb3e023c2\",\n    \"name\": \"Stussy World Tour Tee\",\n    \"category\": \"tee\",\n    \"price\": 1490,\n    \"description\": \"เสื้อยืด World Tour กราฟิครอบโลก\",\n    \"imageUrl\": \"assets/images/stussy_2.jpg\",\n    \"sizes\": [\"S\", \"M\", \"L\", \"XL\"],\n    \"isActive\": true\n  }\n]"
+          }]
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/69f16917d2ddca6eb3e023c4",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "69f16917d2ddca6eb3e023c4"]
+            }
+          },
+          "response": [{
+            "name": "Product Detail",
+            "status": "OK",
+            "code": 200,
+            "body": "{\n  \"_id\": \"69f16917d2ddca6eb3e023c4\",\n  \"name\": \"Stussy 8 Ball Tee\",\n  \"category\": \"tee\",\n  \"price\": 1390,\n  \"description\": \"เสื้อยืดลาย 8 Ball ไอคอนิค\",\n  \"imageUrl\": \"assets/images/stussy_3.jpg\",\n  \"sizes\": [\"S\", \"M\", \"L\", \"XL\"],\n  \"isActive\": true\n}"
+          }]
+        },
+        {
+          "name": "Get Products by Category (Tee)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?category=tee",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"],
+              "query": [{ "key": "category", "value": "tee" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛒 Cart  [Auth Required]",
+      "item": [
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/cart", "host": ["{{baseUrl}}"], "path": ["cart"] }
+          },
+          "response": [{
+            "name": "Cart Response",
+            "status": "OK",
+            "code": 200,
+            "body": "{\n  \"items\": [\n    {\n      \"product\": {\n        \"_id\": \"69f16917d2ddca6eb3e023c4\",\n        \"name\": \"Stussy 8 Ball Tee\",\n        \"price\": 1390,\n        \"imageUrl\": \"assets/images/stussy_3.jpg\"\n      },\n      \"size\": \"M\",\n      \"quantity\": 2\n    }\n  ],\n  \"total\": 2780\n}"
+          }]
+        },
+        {
+          "name": "Add to Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"69f16917d2ddca6eb3e023c4\",\n  \"size\": \"M\",\n  \"quantity\": 1\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/cart", "host": ["{{baseUrl}}"], "path": ["cart"] }
+          },
+          "response": [{
+            "name": "Added to Cart",
+            "status": "OK",
+            "code": 200,
+            "body": "{\n  \"message\": \"Added to cart\",\n  \"cart\": { \"items\": [...], \"total\": 1390 }\n}"
+          }]
+        },
+        {
+          "name": "Update Cart Item Quantity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 3\n}" },
+            "url": { "raw": "{{baseUrl}}/cart/:itemId", "host": ["{{baseUrl}}"], "path": ["cart", ":itemId"], "variable": [{ "key": "itemId", "value": "ITEM_ID_HERE" }] }
+          }
+        },
+        {
+          "name": "Remove Cart Item",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/cart/:itemId", "host": ["{{baseUrl}}"], "path": ["cart", ":itemId"], "variable": [{ "key": "itemId", "value": "ITEM_ID_HERE" }] }
+          },
+          "response": [{ "name": "Removed", "status": "OK", "code": 200, "body": "{ \"message\": \"Item removed\" }" }]
+        }
+      ]
+    },
+    {
+      "name": "📦 Orders  [Auth Required]",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"69f16917d2ddca6eb3e023c4\",\n      \"size\": \"M\",\n      \"quantity\": 2,\n      \"price\": 1390\n    }\n  ],\n  \"shippingAddress\": {\n    \"name\": \"Test User\",\n    \"address\": \"123 ถนนสุขุมวิท แขวงคลองเตย\",\n    \"city\": \"กรุงเทพมหานคร\",\n    \"phone\": \"0812345678\"\n  },\n  \"paymentMethod\": \"credit_card\",\n  \"couponCode\": \"\",\n  \"totalAmount\": 2780\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"] }
+          },
+          "response": [{ "name": "Order Created", "status": "Created", "code": 201, "body": "{\n  \"message\": \"Order created successfully\",\n  \"orderId\": \"64abc123def456...\",\n  \"status\": \"pending\"\n}" }]
+        },
+        {
+          "name": "Get My Orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"] }
+          },
+          "response": [{ "name": "Orders List", "status": "OK", "code": 200, "body": "[\n  {\n    \"_id\": \"64abc123...\",\n    \"status\": \"pending\",\n    \"totalAmount\": 2780,\n    \"createdAt\": \"2025-05-14T10:00:00.000Z\",\n    \"items\": [...]\n  }\n]" }]
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/orders/:id", "host": ["{{baseUrl}}"], "path": ["orders", ":id"], "variable": [{ "key": "id", "value": "ORDER_ID_HERE" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎫 Coupons",
+      "item": [
+        {
+          "name": "Validate Coupon",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/coupons/validate/:code", "host": ["{{baseUrl}}"], "path": ["coupons", "validate", ":code"], "variable": [{ "key": "code", "value": "SAVE10" }] }
+          },
+          "response": [
+            { "name": "Valid Coupon", "status": "OK", "code": 200, "body": "{\n  \"valid\": true,\n  \"discount\": 10,\n  \"type\": \"percent\",\n  \"message\": \"ส่วนลด 10%\"\n}" },
+            { "name": "Invalid Coupon", "status": "Not Found", "code": 404, "body": "{\n  \"valid\": false,\n  \"message\": \"Invalid or expired coupon\"\n}" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🧾 Receipts  [Auth Required]",
+      "item": [
+        {
+          "name": "Get My Receipts",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/receipts", "host": ["{{baseUrl}}"], "path": ["receipts"] }
+          },
+          "response": [{ "name": "Receipts List", "status": "OK", "code": 200, "body": "[\n  {\n    \"_id\": \"64xyz...\",\n    \"orderId\": \"64abc123...\",\n    \"totalAmount\": 2780,\n    \"paidAt\": \"2025-05-14T11:00:00.000Z\"\n  }\n]" }]
+        },
+        {
+          "name": "Get Receipt by Order ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/receipts/:orderId", "host": ["{{baseUrl}}"], "path": ["receipts", ":orderId"], "variable": [{ "key": "orderId", "value": "ORDER_ID_HERE" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "⭐ Reviews",
+      "item": [
+        {
+          "name": "Get Reviews by Product",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/reviews/:productId", "host": ["{{baseUrl}}"], "path": ["reviews", ":productId"], "variable": [{ "key": "productId", "value": "69f16917d2ddca6eb3e023c4" }] }
+          },
+          "response": [{ "name": "Reviews List", "status": "OK", "code": 200, "body": "[\n  {\n    \"_id\": \"64rev...\",\n    \"userId\": { \"name\": \"John Doe\" },\n    \"rating\": 5,\n    \"comment\": \"สินค้าดีมากครับ\",\n    \"createdAt\": \"2025-05-10T08:00:00.000Z\"\n  }\n]" }]
+        },
+        {
+          "name": "Create Review  [Auth Required]",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"69f16917d2ddca6eb3e023c4\",\n  \"rating\": 5,\n  \"comment\": \"สินค้าดีมากครับ ส่งไวมาก\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/reviews", "host": ["{{baseUrl}}"], "path": ["reviews"] }
+          },
+          "response": [{ "name": "Review Created", "status": "Created", "code": 201, "body": "{\n  \"message\": \"Review submitted\",\n  \"review\": {\n    \"_id\": \"64rev...\",\n    \"productId\": \"69f16917d2ddca6eb3e023c4\",\n    \"rating\": 5,\n    \"comment\": \"สินค้าดีมากครับ ส่งไวมาก\"\n  }\n}" }]
+        }
+      ]
+    }
+  ]
+}
